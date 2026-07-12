@@ -1,45 +1,67 @@
-# PR Response
+# PR Response Doc — CineLog Watchlist Feature
 
-Thank you for the review feedback. I addressed each comment by following the existing patterns in the CineLog codebase and considering the design tradeoffs specific to the application.
+## AI Usage
 
-## Comment 1: Watchlist Function Naming
+I used AI tools to help orient myself within the existing codebase, understand the service and test patterns, and reason through the review feedback. I provided the relevant code files to the AI tool and used its explanations to compare the watchlist implementation with the existing collection feature. I verified all suggestions against the actual code before making changes and ran the full test suite after implementation and rebasing.
 
-**Response:** Renamed `save_to_watchlist()` to `add_to_watchlist()` and updated all imports and call sites.
+## Comment 1 — Rename
 
-**Reasoning:** The existing collection service uses the `add_to_collection()` naming pattern. Renaming the watchlist function to `add_to_watchlist()` follows CineLog's existing `verb_to_noun` convention and keeps the service APIs consistent.
+**What I did:** Renamed `save_to_watchlist()` to `add_to_watchlist()` and updated all imports and call sites.
 
-## Comment 2: Duplicate Watchlist Entries
+**How I verified:** I searched the codebase to confirm that no references to `save_to_watchlist()` remained. I also ran the full test suite successfully.
 
-**Response:** Added a duplicate check to `add_to_watchlist()` and introduced `AlreadyInWatchlistError`.
+## Comment 2 — Deduplication
 
-**Reasoning:** I followed the existing deduplication pattern in `add_to_collection()`. Before creating a new `WatchlistEntry`, the service checks for an existing entry with the same `user_id` and `film_id`. If one exists, it raises a specific exception instead of creating a duplicate. I also added a test that verifies the exception is raised and confirms that only one entry remains in the database.
+**What I did:** Added a duplicate check to `add_to_watchlist()` and introduced `AlreadyInWatchlistError`. Before creating a new `WatchlistEntry`, the service checks for an existing entry with the same `user_id` and `film_id`.
 
-## Comment 3: Watchlist Sort Order
+**How I verified:** I added a test that attempts to add the same film twice, verifies that `AlreadyInWatchlistError` is raised, and confirms that only one watchlist entry remains in the database.
 
-**Response:** Changed the watchlist ordering from alphabetical order to newest-added-first.
+## Comment 3 — Missing Test
 
-**Reasoning:** I agree that recently added films are more useful as the default view for a watchlist. This change also makes `get_watchlist()` consistent with the existing `get_collection()` behavior, which already sorts entries by `date_added` in descending order. Using the same default ordering pattern makes CineLog's collection and watchlist services more predictable and consistent.
+**What I did:** Added a test verifying that `add_to_watchlist()` raises `FilmNotFoundError` when the requested `film_id` does not exist.
 
-## Comment 4: Nonexistent Film Test
+**How I verified:** I followed the existing test pattern in `test_collection.py` and used `pytest.raises()` to verify the expected exception. The full test suite passes.
 
-**Response:** Added a test verifying that `add_to_watchlist()` raises `FilmNotFoundError` when the requested `film_id` does not exist.
+## Comment 4 — Default Visibility
 
-**Reasoning:** I followed the test structure in `test_collection.py` by using the existing fixtures, running the service call inside the application context, and verifying the expected exception with `pytest.raises()`. This ensures invalid film IDs are handled by the service rather than causing a database integrity error.
+**My position:** I decided to keep `public=True` as the default visibility for watchlist entries.
 
-## Comment 5: Default Watchlist Visibility
+**Reasoning:** CineLog is a community film-tracking application, so public watchlists support its social and discovery-oriented purpose by making film interests shareable by default.
 
-**Response:** I decided to keep `public=True` as the default visibility for watchlists.
+**Tradeoff acknowledged:** Some users may prefer their saved films to remain private. A future improvement could allow users to explicitly select visibility when adding a film to the watchlist. For the current implementation, I kept the existing public default while documenting the privacy tradeoff.
 
-**Reasoning:** CineLog is described as a community film-tracking application, so public watchlists support the application's social and discovery-oriented purpose by making film interests shareable by default. I recognize the privacy tradeoff: some users may prefer their saved films to remain private. A future improvement would be to expose visibility as an explicit option when adding a film to the watchlist. For the current implementation, I kept the public default because it is consistent with the community-oriented purpose of CineLog while preserving the existing feature behavior.
+## Comment 5 — Sort Order
 
-## Comment 6: Rebase and UUID Migration
+**My position:** I changed the default watchlist ordering from alphabetical order to newest-added-first.
 
-**Response:** Pending rebase onto the updated `main` branch.
+**Reasoning:** Recently added films are useful as the default view for a watchlist. This change also makes `get_watchlist()` consistent with the existing `get_collection()` behavior, which sorts entries by `date_added` in descending order.
 
-**Reasoning:** This comment will be addressed after the other review feedback is stable, as recommended in the project instructions.
+**Engagement with reviewer's point:** I agree with the reviewer that users are likely to want quick access to films they added recently. Following the same ordering pattern as the collection service also makes the behavior of the two features more consistent and predictable.
 
-## Comment 6: Rebase and UUID Migration
+## Comment 6 — Rebase
 
-**Response:** Rebasing the `feature/watchlist` branch onto the updated `main` branch exposed the film ID migration from integers to UUIDs. I updated the watchlist model to use UUID film IDs and verified the watchlist service against the refactored `Film` model.
+**What conflicted:** During the rebase onto the updated `main` branch, Git reported an add/add conflict in `.gitignore`. The updated `main` branch also contained the film ID refactor from integers to UUIDs, which required the watchlist model to be aligned with the new data model.
 
-**Reasoning:** The updated `main` branch defines `Film.id` as `db.String(36)`, so `WatchlistEntry.film_id` must use the same UUID-compatible type to maintain a valid foreign-key relationship. I preserved the watchlist feature while aligning it with the updated data model. After resolving the rebase changes, I ran the full test suite and confirmed that all six tests pass.
+**How I resolved it:** I resolved the `.gitignore` conflict and continued the rebase. After the rebase, I updated `WatchlistEntry.film_id` from an integer column to `db.String(36)` so that it matched the UUID-based `Film.id`. I also updated the watchlist service documentation to reflect that film IDs are UUID strings.
+
+**How I verified no conflict remains:** I completed the rebase successfully, ran the full test suite, and confirmed that all six tests pass. I also verified that the working tree was clean and inspected the final Git history after the interactive rebase.
+
+## PR Description
+
+This PR completes the CineLog watchlist feature and addresses all six review comments. The implementation renames the watchlist service function to follow the existing naming convention, prevents duplicate watchlist entries, adds tests for duplicate and nonexistent film cases, documents the default visibility decision, changes the default sort order to newest-added-first, and aligns the watchlist model with the UUID-based film IDs introduced on `main`.
+
+### Design Decisions
+
+The watchlist retains `public=True` as its default visibility because CineLog is designed as a community film-tracking application. This supports social discovery while acknowledging that configurable privacy would be a useful future improvement.
+
+Watchlist entries are sorted by `date_added` in descending order. This prioritizes recently saved films and keeps the watchlist behavior consistent with the existing collection service.
+
+### Manual Testing Steps
+
+1. Install the project dependencies and activate the virtual environment.
+2. Run `pytest`.
+3. Confirm that all six tests pass.
+4. Verify that adding a valid film creates a watchlist entry.
+5. Verify that adding the same film twice raises `AlreadyInWatchlistError`.
+6. Verify that adding a nonexistent film raises `FilmNotFoundError`.
+7. Verify that `get_watchlist()` returns entries with the newest-added films first.
