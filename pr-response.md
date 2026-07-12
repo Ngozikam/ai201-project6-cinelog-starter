@@ -37,3 +37,9 @@ Thank you for the review feedback. I addressed each comment by following the exi
 **Response:** Pending rebase onto the updated `main` branch.
 
 **Reasoning:** This comment will be addressed after the other review feedback is stable, as recommended in the project instructions.
+
+## Comment 6: Rebase and UUID Migration
+
+**Response:** Rebasing the `feature/watchlist` branch onto the updated `main` branch exposed the film ID migration from integers to UUIDs. I updated the watchlist model to use UUID film IDs and verified the watchlist service against the refactored `Film` model.
+
+**Reasoning:** The updated `main` branch defines `Film.id` as `db.String(36)`, so `WatchlistEntry.film_id` must use the same UUID-compatible type to maintain a valid foreign-key relationship. I preserved the watchlist feature while aligning it with the updated data model. After resolving the rebase changes, I ran the full test suite and confirmed that all six tests pass.
