@@ -67,3 +67,9 @@ Watchlist entries are sorted by `date_added` in descending order. This prioritiz
 5. Verify that adding the same film twice raises `AlreadyInWatchlistError`.
 6. Verify that adding a nonexistent film raises `FilmNotFoundError`.
 7. Verify that `get_watchlist()` returns entries with the newest-added films first.
+
+### Final Commit History
+
+The final `feature/watchlist` branch history contains separate conventional commits for the watchlist feature, review fixes, tests, UUID alignment, and documentation, with no merge commits.
+
+![Final git log showing conventional commit history](screenshots/git-log-history.PNG)
